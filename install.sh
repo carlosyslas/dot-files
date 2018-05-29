@@ -11,3 +11,4 @@ fi
 
 source bash/setup.sh
 source tmux/setup.sh
+source emacs.d/setup.sh
