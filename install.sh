@@ -9,8 +9,12 @@ else
     git clone git@github.com:carlosyslas/dot-files.git $INSTALL_DIR
 fi
 
-source bash/setup.sh
-source tmux/setup.sh
-source homebrew/setup.sh
-source emacs.d/setup.sh
-source node/setup.sh
+self__setup() {
+    source $INSTALL_DIR/$1/setup.sh
+}
+
+self__setup bash
+self__setup tmux
+self__setup homebrew
+self__setup emacs.d
+self__setup node
