@@ -3,7 +3,6 @@
 VSCODE="Visual Studio Code"
 
 if [ ! -d "/Applications/$VSCODE.app" ]; then
-    echo "Installing $VSCODE"
-    self__download_zip https://go.microsoft.com/fwlink/?LinkID=620882
-    self__install_dot_app "$VSCODE"
+    self__banner "Installing $VSCODE"
+    self__install_zip_app https://go.microsoft.com/fwlink/?LinkID=620882 "$VSCODE"
 fi
