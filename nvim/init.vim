@@ -11,4 +11,11 @@ set number
 set wildmode=longest,list
 set invspell
 set background=dark
+set autochdir
+
+call plug#begin()
+Plug 'tpope/vim-fugitive'
+Plug 'aonemd/kuroi.vim'
+call plug#end()
+
 colorscheme kuroi
