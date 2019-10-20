@@ -49,9 +49,14 @@ function parse_git_dirty {
 
 export PS1="\w\[\e[32m\]\` parse_git_branch \`\[\e[m\] • "
 
+. /Users/carlos/.nix-profile/etc/profile.d/nix.sh
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+
 # Auto CD
 #shopt -s autocd
-export CDPATH=$HOME
+export CDPATH=$HOME:$HOME/src
 
 # Aliases
 alias ls="ls -G"
