@@ -12,3 +12,6 @@ nvim +PlugInstall +qall
 
 # Install tmux
 stow -t $HOME tmux
+
+# Install fish
+stow -t $HOME fish
