@@ -7,7 +7,7 @@ set softtabstop=4
 set expandtab
 set shiftwidth=4
 set autoindent
-set number
+set relativenumber
 set wildmode=longest,list
 set invspell
 set background=dark
@@ -25,6 +25,7 @@ Plug 'kevinoid/vim-jsonc'
 Plug 'jparise/vim-graphql'
 Plug 'leafgarland/typescript-vim'
 Plug 'preservim/nerdcommenter'
+Plug 'preservim/nerdtree'
 call plug#end()
 
 " Coc config
@@ -42,5 +43,6 @@ nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle<CR>gv
 
 nnoremap <C-p> :GFiles<CR>
+nnoremap <C-t> :NERDTree<CR>
 
 colorscheme kuroi
