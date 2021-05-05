@@ -7,15 +7,16 @@ set softtabstop=4
 set expandtab
 set shiftwidth=4
 set autoindent
-set relativenumber
+set nu
 set wildmode=longest,list
 set invspell
 set background=dark
 set autochdir
+set nohlsearch
+set termguicolors
 
 call plug#begin()
 Plug 'tpope/vim-fugitive'
-Plug 'aonemd/kuroi.vim'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
@@ -26,6 +27,8 @@ Plug 'jparise/vim-graphql'
 Plug 'leafgarland/typescript-vim'
 Plug 'preservim/nerdcommenter'
 Plug 'preservim/nerdtree'
+Plug 'christoomey/vim-tmux-navigator'
+Plug 'morhetz/gruvbox'
 call plug#end()
 
 " Coc config
@@ -45,4 +48,5 @@ vmap <C-_> <Plug>NERDCommenterToggle<CR>gv
 nnoremap <C-p> :GFiles<CR>
 nnoremap <C-t> :NERDTree<CR>
 
-colorscheme kuroi
+colorscheme gruvbox
+
