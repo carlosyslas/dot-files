@@ -8,5 +8,6 @@ brew "exa"
 brew "ripgrep"
 brew "ranger"
 brew "fish"
+brew "tmux"
 brew "fnm"
 
