@@ -12,3 +12,6 @@ stow -t $HOME tmux
 
 # Install fish
 fish setup_fish.fish
+
+# Install alacritty
+stow -t $HOME alacritty

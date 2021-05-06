@@ -1,0 +1,12 @@
+cask "alacritty" 
+brew "stow"
+brew "neovim"
+brew "jq"
+brew "fzf"
+brew "bat"
+brew "exa"
+brew "ripgrep"
+brew "ranger"
+brew "fish"
+brew "fnm"
+
