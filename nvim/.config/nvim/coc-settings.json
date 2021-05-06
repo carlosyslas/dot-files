@@ -6,9 +6,5 @@
             "filetypes": ["typescript", "typescriptreact", "graphql"]
         }
     },
-    "coc": {
-        "preferences": {
-            "formatOnSaveFileTypes": ["typescript", "typescriptreact"]
-        }
-    }
+    "coc.preferences.formatOnSaveFiletypes": ["typescript", "typescriptreact"]
 }
