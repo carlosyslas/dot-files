@@ -1,0 +1,6 @@
+* dot-files
+
+** Install
+   #+begin_src bash
+     bash -c "$(curl -fsSL https://raw.githubusercontent.com/carlosyslas/dot-files/master/install.sh)"
+   #+end_src
