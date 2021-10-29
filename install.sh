@@ -1,4 +1,8 @@
 #!/bin/bash
+mkdir -p ~/src
+git clone git@github.com:carlosyslas/dot-files.git ~/src/dot-files
+cd ~/src/dot-files/
+
 case "$(uname -s)" in
 	Linux*) source install_linux.sh ;;
 	Darwin*) source install_mac.sh ;;
