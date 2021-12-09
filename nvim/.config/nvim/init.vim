@@ -28,7 +28,9 @@ Plug 'leafgarland/typescript-vim'
 Plug 'preservim/nerdcommenter'
 Plug 'preservim/nerdtree'
 Plug 'christoomey/vim-tmux-navigator'
-Plug 'morhetz/gruvbox'
+" Theme
+Plug 'cocopon/pgmnt.vim'
+Plug 'cocopon/iceberg.vim'
 call plug#end()
 
 " Coc config
@@ -38,6 +40,7 @@ let g:coc_global_extensions = [
     \ 'coc-eslint',
     \ 'coc-prettier',
     \ 'coc-pairs',
+    \ 'coc-python',
     \ ]
 
 "" Nerd commenter
@@ -48,5 +51,5 @@ vmap <C-_> <Plug>NERDCommenterToggle<CR>gv
 nnoremap <C-p> :GFiles<CR>
 nnoremap <C-t> :NERDTree<CR>
 
-colorscheme gruvbox
+colorscheme iceberg
 
