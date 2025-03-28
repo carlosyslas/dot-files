@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+
+card_pattern='UGREEN'
+
+device=$(v4l2-ctl --list-devices \
+    | cut -f2 \
+    | awk 'BEGIN { device_name = "" } /^[^\/]/ { device_name = $0 } /\/dev/ { print device_name, $0 }' \
+    | grep 'video' \
+    | grep $card_pattern \
+    | fzf \
+    | awk '{ print $NF }')
+ffplay -f v4l2 -fflags nobuffer -i $device
