@@ -1,7 +1,26 @@
-# The defaults below could be overridden in $XDG_CONFIG_HOME/swaylock/config
-#  (~/.config/swaylock/config).
-#
-# Image path supports environment variables and shell expansions,
-# e.g. image=$HOME/Pictures/default.png
-image=~/.config/wallpapers/concrete-blur.jpg
+color=18181b
+separator-color=18181b
+
+line-color=18181b
+inside-color=00bc7d
+ring-color=00bc7d
+
+line-ver-color=18181b
+text-ver-color=00a6f4
+inside-ver-color=00a6f4
+ring-ver-color=00a6f4
+
+line-clear-color=18181b
+text-clear-color=3f3f46
+inside-clear-color=3f3f46
+ring-clear-color=3f3f46
+
+key-hl-color=5ee9b5
+bs-hl-color=ffb86a
+
+line-wrong-color=18181b
+text-wrong-color=ff6900
+inside-wrong-color=ff6900
+ring-wrong-color=ff6900
+
 scaling=fill
