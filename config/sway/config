@@ -30,7 +30,7 @@ set $menu wofi --show drun
 #
 # Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
 # Requires: desktop-backgrounds-compat, swaybg, jxl-pixbuf-loader
-output * bg ~/.config/wallpapers/concrete.jpg fill
+output * bg ~/.config/wallpapers/abstract1.jpg fill
 #
 # Example configuration:
 #
