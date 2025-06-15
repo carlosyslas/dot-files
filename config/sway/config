@@ -228,7 +228,7 @@ bindsym $mod+r mode "resize"
 #
 
 # Gaps
-gaps inner 4
+gaps inner 0
 smart_gaps on
 
 include '$(/usr/libexec/sway/layered-include "/usr/share/sway/config.d/*.conf" "/etc/sway/config.d/*.conf" "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/*.conf")'
