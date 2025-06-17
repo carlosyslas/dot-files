@@ -1,7 +1,5 @@
 #!/usr/bin/bash
 
-set -o vi
-
 export EDITOR="nvim"
 
 export HISTCONTROL=ignoreboth
