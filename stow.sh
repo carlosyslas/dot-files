@@ -2,4 +2,4 @@
 
 mkdir -p $HOME/.local/bin
 
-stow -t $HOME/ .
+stow -R -t $HOME/ --dotfiles .
