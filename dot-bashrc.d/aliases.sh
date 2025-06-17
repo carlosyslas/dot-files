@@ -2,11 +2,15 @@
 
 # Global
 alias v="nvim"
-alias ll="eza -l --icons --no-quotes --no-filesize --no-user --no-time --git"
-alias ls="eza -l --icons --no-quotes --no-filesize --no-user --no-time --no-permissions --git"
+alias ls="ls --color=auto"
+alias ll="ls -l --color=auto"
+alias la="ls --color=auto -la"
 
 # Git
 alias g="git"
+alias ga="git add"
+alias gap="git add --patch"
+alias gc="git commit"
 alias gco="git checkout"
 alias gf="git fetch --prune"
 alias gl="git pull --rebase"
