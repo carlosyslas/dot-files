@@ -1,0 +1,32 @@
+- name: Setup Environment
+  hosts: localhost
+  tasks:
+    - name: Install Software
+      ansible.builtin.apt:
+        pkg:
+          - sway
+          - swaylock
+          - waybar
+          - wofi
+          - wlogout
+          - git
+          - stow
+          - emacs
+          - vim
+          - fd-find
+          - ripgrep
+          - fzf
+          - zoxide
+          - alacritty
+          - jq
+          - yq
+          - git
+          - pcmanfm
+          - mpv
+          - lxqt-policykit
+          - lxappearance
+          - fonts-noto
+        update_cache: yes
+        state: latest
+      become: yes
+      when: ansible_distribution == 'Debian'
