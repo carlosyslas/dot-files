@@ -1,0 +1,53 @@
+- name: Add base Debian repositories
+  ansible.builtin.apt_repository:
+    repo: deb http://deb.debian.org/debian {{ ansible_distribution_release }} main contrib non-free-firmware
+    state: present
+  become: yes
+- name: Download Docker repository key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/debian/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: a+r
+  become: yes
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable
+  become: yes
+- name: Install Software
+  ansible.builtin.apt:
+    pkg:
+      - sway
+      - swaylock
+      - waybar
+      - wofi
+      - wlogout
+      - git
+      - stow
+      - emacs
+      - vim
+      - fd-find
+      - ripgrep
+      - fzf
+      - zoxide
+      - alacritty
+      - jq
+      - yq
+      - git
+      - pcmanfm
+      - mpv
+      - lxqt-policykit
+      - lxappearance
+      - fonts-noto
+      - curl
+      - wget
+      - rsync
+      - htop
+      - flatpak
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    update_cache: yes
+    state: latest
+  become: yes

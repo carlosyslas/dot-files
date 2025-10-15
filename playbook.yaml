@@ -1,32 +1,18 @@
 - name: Setup Environment
   hosts: localhost
-  tasks:
-    - name: Install Software
-      ansible.builtin.apt:
-        pkg:
-          - sway
-          - swaylock
-          - waybar
-          - wofi
-          - wlogout
-          - git
-          - stow
-          - emacs
-          - vim
-          - fd-find
-          - ripgrep
-          - fzf
-          - zoxide
-          - alacritty
-          - jq
-          - yq
-          - git
-          - pcmanfm
-          - mpv
-          - lxqt-policykit
-          - lxappearance
-          - fonts-noto
-        update_cache: yes
-        state: latest
-      become: yes
+  roles:
+    - role: debian
       when: ansible_distribution == 'Debian'
+  tasks:
+    - name: Add user to docker group
+      ansible.builtin.user:
+        name: cya
+        append: true
+        groups:
+          - docker
+      become: true
+    - name: Enable Docker service
+      ansible.builtin.systemd_service:
+        name: docker
+        enabled: true
+        state: started
