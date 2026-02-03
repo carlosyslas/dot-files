@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+
+import json
+import subprocess
+import argparse
+from dataclasses import dataclass
+
+
+@dataclass
+class Window:
+    id: int
+    app_id: str
+    is_focused: bool
+
+    def __init__(self, id: int, app_id: str, is_focused: bool, **kwargs):
+        self.id = id
+        self.app_id = app_id
+        self.is_focused = is_focused
+
+
+parser = argparse.ArgumentParser(
+    prog="focus_or_spawn",
+    description="Focuses or spanws a new window on Niri",
+)
+
+parser.add_argument("-i", "--app-id", required=True)
+parser.add_argument("-c", "--command", required=True)
+
+
+def list_open_windows() -> list[Window]:
+    process_result = subprocess.run(
+        ["niri", "msg", "--json", "windows"],
+        capture_output=True,
+    )
+    windows = json.loads(process_result.stdout)
+    return [Window(**w) for w in windows]
+
+
+def get_next_window_if_open(app_id: str) -> Window | None:
+    # TODO: Maybe cycle throught the open windows?
+    windows = list_open_windows()
+    return next((w for w in windows if w.app_id == app_id), None)
+
+
+def focus_window(window: Window):
+    subprocess.run([
+        "niri",
+        "msg",
+        "action",
+        "focus-window",
+        "--id",
+        str(window.id)
+    ])
+
+def spawn_sh(command: str):
+    subprocess.run([
+        "niri",
+        "msg",
+        "action",
+        "spawn-sh",
+        "--"
+    ] + command.split())
+
+
+def main():
+    args = parser.parse_args()
+    window = get_next_window_if_open(args.app_id)
+    if window:
+        focus_window(window)
+    else:
+        spawn_sh(args.command)
+
+
+if __name__ == "__main__":
+    main()
