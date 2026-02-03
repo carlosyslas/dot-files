@@ -52,6 +52,7 @@ PACMAN_PKGS = [
     "vlc",
     "openssh",
     "wl-clipboard",
+    "uv",
 ]
 
 FLATPAK_APPS = [
@@ -60,13 +61,14 @@ FLATPAK_APPS = [
     "app.zen_browser.zen",
     "com.sayonara_player.Sayonara",
     "org.qbittorrent.qBittorrent",
-    "flathub org.telegram.desktop",
+    "org.telegram.desktop",
     "io.github.kolunmi.Bazaar",
     "org.gimp.GIMP",
     "org.kde.krita",
     "org.inkscape.Inkscape",
     "io.gitlab.theevilskeleton.Upscaler",
     "org.localsend.localsend_app",
+    "app.ytmdesktop.ytmdesktop",
 ]
 
 def _sudo(cmd: list[str], sudo_pass: str):
@@ -78,11 +80,11 @@ def _sudo(cmd: list[str], sudo_pass: str):
 
 
 def _pacman_install(pkgs: list[str], sudo_pass: str):
-    _sudo(["pacman", "-S", "--needed", "--noconfirm"] + pkgs)
+    _sudo(["pacman", "-S", "--needed", "--noconfirm"] + pkgs, sudo_pass)
 
 
 def update_system(sudo_pass: str):
-    _sudo(["pacman", "-Su", "--noconfirm"])
+    _sudo(["pacman", "-Su", "--noconfirm"], sudo_pass)
 
 
 def install_pacman_pkgs(sudo_pass: str):
@@ -94,19 +96,20 @@ def update_flatpak_apps():
 
 
 def install_flatpak_apps():
-    subprocess.run(["flatpak install"] + FLATPAK_APPS)
+    subprocess.run(["flatpak", "install"] + FLATPAK_APPS)
 
 
 def main():
     args = parser.parse_args()
     print(args)
-    exit(1)
+    #exit(1)
 
     import getpass
     sudo_pass = getpass.getpass("Sudo password: ", echo_char="*")
 
     update_system(sudo_pass)
     install_pacman_pkgs(sudo_pass)
+    install_flatpak_apps()
 
 
 if __name__ == "__main__":
