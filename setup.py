@@ -11,6 +11,10 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--keyring', action="store_true")
 parser.add_argument('--system-upgrade', action="store_true")
 parser.add_argument('--pacman-pkgs', action="store_true")
+parser.add_argument('--flatpak-apps', action="store_true")
+parser.add_argument('--paru-pkgs', action="store_true")
+parser.add_argument('--update-mandb', action="store_true")
+parser.add_argument('--all', action="store_true")
 
 PACMAN_PKGS = [
     "wayland",
@@ -97,7 +101,7 @@ def install_pacman_pkgs(sudo_pass: str):
 
 
 def update_flatpak_apps():
-    subprocess.run(["flatpak update"])
+    subprocess.run(["flatpak", "update"])
 
 
 def install_flatpak_apps():
@@ -115,20 +119,32 @@ def install_paru_pkgs(sudo_pass: str):
 def update_manuals_db(sudo_pass: str):
     _sudo(["mandb"], sudo_pass)
 
+def _banner(text: str):
+    print("*" * (len(text) + 4))
+    print(f"* {text} *")
+    print("*" * (len(text) + 4))
 
 def main():
     args = parser.parse_args()
-    print(args)
-    #exit(1)
 
     import getpass
     sudo_pass = getpass.getpass("Sudo password: ", echo_char="*")
 
-    update_system(sudo_pass)
-    install_pacman_pkgs(sudo_pass)
-    install_flatpak_apps()
-    install_paru_pkgs(sudo_pass)
-    update_manuals_db(sudo_pass)
+    if args.system_upgrade or args.all:
+        _banner("Updating System")
+        update_system(sudo_pass)
+    if args.pacman_pkgs or args.all:
+        _banner("Install Pacman PKGs")
+        install_pacman_pkgs(sudo_pass)
+    if args.flatpak_apps or args.all:
+        _banner("Install Flatpak Apps")
+        install_flatpak_apps()
+    if args.paru_pkgs or args.all:
+        _banner("Install AUR PKGs")
+        install_paru_pkgs(sudo_pass)
+    if args.update_mandb or args.all:
+        _banner("Update Manuals DB")
+        update_manuals_db(sudo_pass)
 
 
 if __name__ == "__main__":
