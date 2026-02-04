@@ -71,6 +71,11 @@ FLATPAK_APPS = [
     "app.ytmdesktop.ytmdesktop",
 ]
 
+PARU_PKGS = [
+    "noctalia-shell",
+    "emacs-wayland",
+]
+
 def _sudo(cmd: list[str], sudo_pass: str):
     subprocess.run(
         ["sudo", "-S"] + cmd,
@@ -99,6 +104,18 @@ def install_flatpak_apps():
     subprocess.run(["flatpak", "install"] + FLATPAK_APPS)
 
 
+def install_paru_pkgs(sudo_pass: str):
+    subprocess.run(
+        ["paru", "-S", "--needed", "--noconfirm"] + PARU_PKGS,
+        input=sudo_pass,
+        encoding="ascii",
+    )
+
+
+def update_manuals_db(sudo_pass: str):
+    _sudo(["mandb"], sudo_pass)
+
+
 def main():
     args = parser.parse_args()
     print(args)
@@ -110,6 +127,8 @@ def main():
     update_system(sudo_pass)
     install_pacman_pkgs(sudo_pass)
     install_flatpak_apps()
+    install_paru_pkgs(sudo_pass)
+    update_manuals_db(sudo_pass)
 
 
 if __name__ == "__main__":
