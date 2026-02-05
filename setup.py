@@ -57,6 +57,7 @@ PACMAN_PKGS = [
     "openssh",
     "wl-clipboard",
     "uv",
+    "yt-dlp",
 ]
 
 FLATPAK_APPS = [
