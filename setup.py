@@ -102,11 +102,11 @@ def install_pacman_pkgs(sudo_pass: str):
 
 
 def update_flatpak_apps():
-    subprocess.run(["flatpak", "update"])
+    subprocess.run(["flatpak", "update", "-y"])
 
 
 def install_flatpak_apps():
-    subprocess.run(["flatpak", "install"] + FLATPAK_APPS)
+    subprocess.run(["flatpak", "install", "-y"] + FLATPAK_APPS)
 
 
 def install_paru_pkgs(sudo_pass: str):
