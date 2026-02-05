@@ -74,6 +74,9 @@ FLATPAK_APPS = [
     "io.gitlab.theevilskeleton.Upscaler",
     "org.localsend.localsend_app",
     "app.ytmdesktop.ytmdesktop",
+    "org.audacityteam.Audacity",
+    "org.kde.kdenlive",
+    "com.ozmartians.VidCutter",
 ]
 
 PARU_PKGS = [
