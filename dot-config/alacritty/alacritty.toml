@@ -1,3 +1,6 @@
+[font]
+normal = { family = "SauceCodePro Nerd Font Mono", style = "Regular" }
+size=13
 [colors.primary]
 background = '#18181b'
 foreground = '#f4f4f5'
