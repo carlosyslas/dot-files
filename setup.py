@@ -21,6 +21,9 @@ PACMAN_PKGS = [
     "wayland-protocols",
     "libinput",
     "xorg-xwayland",
+    "xdg-desktop-portal-gtk",
+    "xdg-desktop-portal-gnome",
+    "nautilus",
     "pipewire",
     "pipewire-audio",
     "pipewire-pulse",
@@ -77,6 +80,8 @@ FLATPAK_APPS = [
     "org.audacityteam.Audacity",
     "org.kde.kdenlive",
     "com.ozmartians.VidCutter",
+    "io.dbeaver.DBeaverCommunity",
+    "io.dbeaver.DBeaverCommunity.Client.pgsql",
 ]
 
 PARU_PKGS = [
