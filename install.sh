@@ -4,7 +4,7 @@ sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-releas
 sudo dnf config-manager addrepo --from-repofile https://download.docker.com/linux/fedora/docker-ce.repo
 sudo dnf update
 sudo dnf upgrade -y
-sudo dnf install -y vim stow alacritty git timeshift emacs yt-dlp imv mpv vlc zsh fastfetch
+sudo dnf install -y vim stow alacritty git timeshift emacs yt-dlp imv mpv vlc zsh fastfetch bat ranger cargo jq yq fzf ripgrep
 sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -13,4 +13,6 @@ flatpak install -y com.brave.Browser app.zen_browser.zen io.gitlab.theevilskelet
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
 brew install anomalyco/tap/opencode
-brew install starship
+brew install starship hugo tlrc uv
+
+cargo install fnm bottom
