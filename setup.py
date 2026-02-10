@@ -50,6 +50,7 @@ PACMAN_PKGS = [
     "ttf-firacode-nerd",
     "podman",
     "podman-compose",
+    "fuse-overlayfs"
     "distrobox",
     "cava",
     "pcmanfm-qt",
@@ -60,6 +61,8 @@ PACMAN_PKGS = [
     "man-pages",
     "man-db",
     "wget",
+    "starship",
+    "eza",
     "papirus-icon-theme",
     "swaybg",
     "fastfetch",
@@ -112,7 +115,7 @@ def _pacman_install(pkgs: list[str], sudo_pass: str):
 
 
 def update_system(sudo_pass: str):
-    _sudo(["pacman", "-Su", "--noconfirm"], sudo_pass)
+    _sudo(["pacman", "-Syyu", "--noconfirm"], sudo_pass)
 
 
 def install_pacman_pkgs(sudo_pass: str):
