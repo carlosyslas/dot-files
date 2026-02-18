@@ -13,17 +13,7 @@ trap cleanup EXIT
 
 echo "Downloading dot-setup $VERSION..."
 
-ARCH=$(uname -m)
-if [[ "$ARCH" == "x86_64" ]]; then
-    ARCH="x86_64"
-elif [[ "$ARCH" == "aarch64" ]]; then
-    ARCH="aarch64"
-else
-    echo "Unsupported architecture: $ARCH"
-    exit 1
-fi
-
-URL="https://github.com/$REPO/releases/download/$VERSION/dot-setup-$ARCH"
+URL="https://github.com/$REPO/releases/download/$VERSION/$BINARY_NAME"
 BINARY_PATH="$TMP_DIR/$BINARY_NAME"
 
 if curl -sL --fail "$URL" -o "$BINARY_PATH" 2>/dev/null; then
