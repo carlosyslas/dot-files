@@ -7,10 +7,12 @@ sudo dnf install -y \
     https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
 
 echo "=== Adding Docker repository ==="
-sudo dnf config-manager addrepo --from-repofile https://download.docker.com/linux/fedora/docker-ce.repo
+sudo dnf config-manager addrepo --overwrite --from-repofile https://download.docker.com/linux/fedora/docker-ce.repo
 
 echo "=== Adding Terra repository ==="
-sudo dnf install --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
+if ! rpm -q terra-release &>/dev/null; then
+    sudo dnf install --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
+fi
 
 echo "=== Updating system ==="
 sudo dnf update -y
@@ -51,7 +53,6 @@ sudo dnf install -y \
     gnome-keyring \
     seahorse \
     libsodium \
-    pkgconf-pkgs \
     pkgconfig
 
 echo "=== Installing Docker ==="
@@ -90,3 +91,9 @@ sudo dnf install -y terra-release-extras
 
 echo "=== Setup complete! ==="
 echo "Consider restarting or running: exec zsh"
+
+if command -v notify-send &>/dev/null; then
+    notify-send "Installation Complete" "Run 'exec zsh' to start using your new shell"
+else
+    echo -e '\a'
+fi
