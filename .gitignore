@@ -16,3 +16,4 @@ Thumbs.db
 # Local config
 .env
 .env.local
+kde-run-or-raise/target/
