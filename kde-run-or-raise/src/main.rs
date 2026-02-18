@@ -110,9 +110,15 @@ fn launch_app(app_name: &str, exec: &str) {
         .output();
 
     if output.is_err() || !output.unwrap().status.success() {
-        let _ = Command::new("nohup")
-            .arg(exec)
-            .arg("&")
-            .spawn();
+        let output = Command::new("kstart")
+            .args(["--desktop", "-1", exec])
+            .output();
+
+        if output.is_err() || !output.unwrap().status.success() {
+            let _ = Command::new("nohup")
+                .arg(exec)
+                .arg("&")
+                .spawn();
+        }
     }
 }
