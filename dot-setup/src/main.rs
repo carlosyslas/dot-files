@@ -25,10 +25,9 @@ use std::time::Duration;
 #[derive(PartialEq, Clone, Copy)]
 enum AppState {
     Selection = 0,
-    Confirm = 1,
-    GettingPassword = 2,
-    Running = 3,
-    Done = 4,
+    GettingPassword = 1,
+    Running = 2,
+    Done = 3,
 }
 
 impl AppState {
@@ -39,9 +38,8 @@ impl AppState {
     fn from_usize(val: usize) -> Self {
         match val {
             0 => AppState::Selection,
-            1 => AppState::Confirm,
-            2 => AppState::GettingPassword,
-            3 => AppState::Running,
+            1 => AppState::GettingPassword,
+            2 => AppState::Running,
             _ => AppState::Done,
         }
     }
@@ -148,13 +146,6 @@ struct App {
     sudo_password: String,
     running: Arc<AtomicBool>,
     config: Config,
-    focus: Focus,
-}
-
-#[derive(PartialEq, Clone, Copy)]
-enum Focus {
-    TaskList,
-    Buttons,
 }
 
 impl App {
@@ -184,7 +175,6 @@ impl App {
             sudo_password: String::new(),
             running: Arc::new(AtomicBool::new(true)),
             config,
-            focus: Focus::TaskList,
         }
     }
 
@@ -267,10 +257,6 @@ impl App {
                     }
                 }
                 current_step.store(i, Ordering::Relaxed);
-
-                let mut out = output.lock().unwrap();
-                out.push(format!("\n=== {} ===", task.name));
-                drop(out);
 
                 let result = match task.id.as_str() {
                     "repos" => run_repos(&config, &password),
@@ -530,47 +516,20 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                     if app.selected_index < app.tasks.len() {
                                         app.toggle_task();
                                     } else if app.selected_index == app.tasks.len() {
-                                        app.set_state(AppState::Confirm);
-                                        app.selected_index = 0;
-                                        app.focus = Focus::Buttons;
+                                        app.running.store(true, Ordering::Relaxed);
+                                        app.start_tasks();
                                     }
                                 }
                                 KeyCode::Enter => {
                                     if app.selected_index < app.tasks.len() {
                                         app.toggle_task();
                                     } else if app.selected_index == app.tasks.len() {
-                                        app.set_state(AppState::Confirm);
-                                        app.selected_index = 0;
-                                        app.focus = Focus::Buttons;
+                                        app.running.store(true, Ordering::Relaxed);
+                                        app.start_tasks();
                                     }
                                 }
                                 KeyCode::Esc => {
                                     return Ok(());
-                                }
-                                _ => {}
-                            }
-                        }
-                        AppState::Confirm => {
-                            match key.code {
-                                KeyCode::Left | KeyCode::Right => {
-                                    if app.focus == Focus::Buttons {
-                                        app.selected_index = if app.selected_index == 0 { 1 } else { 0 };
-                                    }
-                                }
-                                KeyCode::Enter => {
-                                    if app.selected_index == 0 {
-                                        app.running.store(true, Ordering::Relaxed);
-                                        app.start_tasks();
-                                    } else {
-                                        app.set_state(AppState::Selection);
-                                        app.selected_index = 0;
-                                        app.focus = Focus::TaskList;
-                                    }
-                                }
-                                KeyCode::Esc => {
-                                    app.set_state(AppState::Selection);
-                                    app.selected_index = 0;
-                                    app.focus = Focus::TaskList;
                                 }
                                 _ => {}
                             }
@@ -584,7 +543,6 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                             if key.code == KeyCode::Esc {
                                 app.set_state(AppState::Selection);
                                 app.selected_index = 0;
-                                app.focus = Focus::TaskList;
                                 app.sudo_password.clear();
                                 let mut out = app.output.lock().unwrap();
                                 out.clear();
@@ -659,32 +617,6 @@ fn ui(frame: &mut Frame, app: &App) {
 
             frame.render_widget(list, chunks[1]);
         }
-        AppState::Confirm => {
-            let enabled = app.get_enabled_tasks();
-            let task_list: Vec<Line> = enabled.iter().map(|t| Line::from(t.name.as_str())).collect();
-            
-            let tasks_text = Paragraph::new(task_list)
-                .block(Block::default().borders(Borders::ALL).title("Ready to run:"));
-            frame.render_widget(tasks_text, chunks[1]);
-
-            let confirm_text = if app.selected_index == 0 {
-                Span::styled(" [Confirm] ", Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD))
-                    .to_owned()
-            } else {
-                Span::raw(" [Confirm] ")
-            };
-            let cancel_text = if app.selected_index == 1 {
-                Span::styled(" [Cancel] ", Style::default().fg(Color::Yellow).add_modifier(ratatui::style::Modifier::BOLD))
-                    .to_owned()
-            } else {
-                Span::raw(" [Cancel] ")
-            };
-            
-            let buttons = Paragraph::new(Line::from(vec![confirm_text, Span::raw("   "), cancel_text]))
-                .style(Style::default().fg(Color::White))
-                .block(Block::default().borders(Borders::ALL).title("Confirm"));
-            frame.render_widget(buttons, chunks[1]);
-        }
         AppState::Running | AppState::Done => {
             let steps = app.steps.lock().unwrap();
             let current = app.current_step.load(Ordering::Relaxed) as usize;
@@ -724,7 +656,6 @@ fn ui(frame: &mut Frame, app: &App) {
     let help_text = match state {
         AppState::GettingPassword => "Type password | Enter Submit | Esc Cancel",
         AppState::Selection => "↑↓ Select | Space/Enter Toggle | Esc Exit",
-        AppState::Confirm => "←→ Switch | Enter Confirm | Esc Back",
         AppState::Running => "Press ESC to cancel...",
         AppState::Done => "Press ESC to return",
     };
