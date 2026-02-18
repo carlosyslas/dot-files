@@ -42,8 +42,10 @@ fn main() {
     }
 }
 
+const QDBUS_PATH: &str = "/usr/lib64/qt6/bin/qdbus";
+
 fn list_windows() {
-    let output = Command::new("qdbus")
+    let output = Command::new(QDBUS_PATH)
         .args(["org.kde.KWin", "/KWin", "org.kde.KWin.Windows"])
         .output();
 
@@ -71,7 +73,7 @@ fn list_windows() {
 }
 
 fn find_window(app_id: &str) -> Option<String> {
-    let output = Command::new("qdbus")
+    let output = Command::new(QDBUS_PATH)
         .args(["org.kde.KWin", "/KWin", "org.kde.KWin.Windows"])
         .output();
 
@@ -104,7 +106,7 @@ fn find_window(app_id: &str) -> Option<String> {
 }
 
 fn get_window_property(window_id: &str, property: &str) -> Option<String> {
-    let output = Command::new("qdbus")
+    let output = Command::new(QDBUS_PATH)
         .args([
             "org.kde.KWin",
             &format!("/KWin/Window/{}", window_id),
@@ -124,7 +126,7 @@ fn get_window_property(window_id: &str, property: &str) -> Option<String> {
 
 fn raise_window(window_id: &str, switch_desktop: bool) {
     if switch_desktop {
-        let _ = Command::new("qdbus")
+        let _ = Command::new(QDBUS_PATH)
             .args([
                 "org.kde.KWin",
                 &format!("/KWin/Window/{}", window_id),
@@ -134,7 +136,7 @@ fn raise_window(window_id: &str, switch_desktop: bool) {
             .output();
     }
 
-    let _ = Command::new("qdbus")
+    let _ = Command::new(QDBUS_PATH)
         .args([
             "org.kde.KWin",
             &format!("/KWin/Window/{}", window_id),
