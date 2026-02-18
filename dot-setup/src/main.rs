@@ -17,18 +17,40 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
 #[derive(PartialEq, Clone)]
 enum AppState {
-    Menu,
-    GettingPassword,
-    Installing,
-    Stowing,
-    Done,
+    Menu = 0,
+    GettingPassword = 1,
+    Installing = 2,
+    Stowing = 3,
+    Done = 4,
+}
+
+impl AppState {
+    fn as_usize(&self) -> usize {
+        match self {
+            AppState::Menu => 0,
+            AppState::GettingPassword => 1,
+            AppState::Installing => 2,
+            AppState::Stowing => 3,
+            AppState::Done => 4,
+        }
+    }
+    
+    fn from_usize(val: usize) -> Self {
+        match val {
+            0 => AppState::Menu,
+            1 => AppState::GettingPassword,
+            2 => AppState::Installing,
+            3 => AppState::Stowing,
+            _ => AppState::Done,
+        }
+    }
 }
 
 #[derive(Deserialize, Clone)]
@@ -62,6 +84,7 @@ struct Packages {
 
 #[derive(Deserialize, Clone)]
 struct PackageGroup {
+    #[allow(dead_code)]
     description: String,
     packages: Vec<String>,
     #[serde(default)]
@@ -70,6 +93,7 @@ struct PackageGroup {
 
 #[derive(Deserialize, Clone)]
 struct FlatpakGroup {
+    #[allow(dead_code)]
     description: String,
     remote: String,
     apps: Vec<String>,
@@ -77,6 +101,7 @@ struct FlatpakGroup {
 
 #[derive(Deserialize, Clone)]
 struct HomebrewGroup {
+    #[allow(dead_code)]
     description: String,
     #[serde(rename = "install_script")]
     install_script: String,
@@ -85,6 +110,7 @@ struct HomebrewGroup {
 
 #[derive(Deserialize, Clone)]
 struct OpenCodeGroup {
+    #[allow(dead_code)]
     description: String,
     url: String,
 }
@@ -97,13 +123,13 @@ struct Commands {
 }
 
 struct App {
-    state: AppState,
+    state: Arc<AtomicUsize>,
     selected_index: usize,
     menu_items: Vec<String>,
-    output: Vec<String>,
+    output: Arc<Mutex<Vec<String>>>,
     scroll: u16,
     sudo_password: String,
-    running: AtomicBool,
+    running: Arc<AtomicBool>,
     config: Config,
 }
 
@@ -112,7 +138,7 @@ impl App {
         let config = load_config().expect("Failed to load config");
         
         Self {
-            state: AppState::Menu,
+            state: Arc::new(AtomicUsize::new(0)),
             selected_index: 0,
             menu_items: vec![
                 "Install System".to_string(),
@@ -120,18 +146,27 @@ impl App {
                 "View Logs".to_string(),
                 "Exit".to_string(),
             ],
-            output: vec!["Welcome to dot-setup TUI".to_string()],
+            output: Arc::new(Mutex::new(vec!["Welcome to dot-setup TUI".to_string()])),
             scroll: 0,
             sudo_password: String::new(),
-            running: AtomicBool::new(true),
+            running: Arc::new(AtomicBool::new(true)),
             config,
         }
     }
 
+    fn get_state(&self) -> AppState {
+        AppState::from_usize(self.state.load(Ordering::Relaxed))
+    }
+
+    fn set_state(&self, new_state: AppState) {
+        self.state.store(new_state.as_usize(), Ordering::Relaxed);
+    }
+
     fn get_password(&mut self) {
-        self.state = AppState::GettingPassword;
-        self.output.clear();
-        self.output.push("Enter sudo password:".to_string());
+        self.set_state(AppState::GettingPassword);
+        let mut out = self.output.lock().unwrap();
+        out.clear();
+        out.push("Enter sudo password:".to_string());
     }
 
     fn run_install(&mut self) {
@@ -140,13 +175,18 @@ impl App {
             return;
         }
 
-        self.state = AppState::Installing;
-        self.output.clear();
-        self.output.push("Starting installation...".to_string());
+        self.set_state(AppState::Installing);
+        {
+            let mut out = self.output.lock().unwrap();
+            out.clear();
+            out.push("Starting installation...".to_string());
+        }
 
         let password = self.sudo_password.clone();
         let config = self.config.clone();
-        let (tx, rx) = mpsc::channel();
+        let output = Arc::clone(&self.output);
+        let running = Arc::clone(&self.running);
+        let state = Arc::clone(&self.state);
 
         thread::spawn(move || {
             let repo = &config.repositories;
@@ -212,106 +252,116 @@ impl App {
             ];
 
             for (desc, cmd_str) in commands {
+                if !running.load(Ordering::Relaxed) {
+                    let mut out = output.lock().unwrap();
+                    out.push("\n=== Installation cancelled ===".to_string());
+                    break;
+                }
+                
                 if cmd_str.is_empty() {
                     continue;
                 }
                 
-                let _ = tx.send(format!("\n=== {} ===", desc));
+                {
+                    let mut out = output.lock().unwrap();
+                    out.push(format!("\n=== {} ===", desc));
+                }
 
-                let output = Command::new("sh")
+                let output_child = Command::new("sh")
                     .args(["-c", &cmd_str])
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
                     .output();
 
-                match output {
-                    Ok(out) => {
-                        if !out.stdout.is_empty() {
-                            let lines: Vec<String> = String::from_utf8_lossy(&out.stdout)
+                match output_child {
+                    Ok(cmd_out) => {
+                        if !cmd_out.stdout.is_empty() {
+                            let lines: Vec<String> = String::from_utf8_lossy(&cmd_out.stdout)
                                 .lines()
                                 .filter(|l| !l.contains("Password:"))
                                 .map(|s| s.to_string())
                                 .collect();
+                            let mut out = output.lock().unwrap();
                             for line in lines.iter().take(20) {
-                                let _ = tx.send(line.clone());
+                                out.push(line.clone());
                             }
                         }
-                        if !out.stderr.is_empty() {
-                            let stderr = String::from_utf8_lossy(&out.stderr);
+                        if !cmd_out.stderr.is_empty() {
+                            let stderr = String::from_utf8_lossy(&cmd_out.stderr);
                             if !stderr.contains("Password:") && !stderr.is_empty() {
-                                let _ = tx.send(format!("stderr: {}", stderr));
+                                let mut out = output.lock().unwrap();
+                                out.push(format!("stderr: {}", stderr));
                             }
                         }
-                        if out.status.success() {
-                            let _ = tx.send(format!("✓ {} completed", desc));
+                        let mut out = output.lock().unwrap();
+                        if out.len() > 1000 {
+                            out.drain(0..500);
+                        }
+                        if cmd_out.status.success() {
+                            out.push(format!("✓ {} completed", desc));
                         } else {
-                            let _ = tx.send(format!("✗ {} failed (exit code: {:?})", desc, out.status.code()));
+                            out.push(format!("✗ {} failed (exit code: {:?})", desc, cmd_out.status.code()));
                         }
                     }
                     Err(e) => {
-                        let _ = tx.send(format!("Error: {}", e));
+                        let mut out = output.lock().unwrap();
+                        out.push(format!("Error: {}", e));
                     }
                 }
             }
 
-            let _ = tx.send("\n=== Setup complete! ===".to_string());
-            let _ = tx.send("Consider restarting or running: exec zsh".to_string());
-            let _ = tx.send("Press ESC to return to menu".to_string());
+            if running.load(Ordering::Relaxed) {
+                let mut out = output.lock().unwrap();
+                out.push("\n=== Setup complete! ===".to_string());
+                out.push("Consider restarting or running: exec zsh".to_string());
+                out.push("Press ESC to return to menu".to_string());
+            }
+            
+            state.store(AppState::Done.as_usize(), Ordering::Relaxed);
         });
-
-        while self.running.load(Ordering::Relaxed) {
-            match rx.try_recv() {
-                Ok(msg) => {
-                    self.output.push(msg);
-                    if self.output.len() > 1000 {
-                        self.output.remove(0);
-                    }
-                    self.scroll = (self.output.len() as u16).saturating_sub(1);
-                }
-                Err(mpsc::TryRecvError::Empty) => {
-                    if !self.state.eq(&AppState::Installing) {
-                        break;
-                    }
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    break;
-                }
-            }
-            thread::sleep(Duration::from_millis(50));
-        }
     }
 
     fn run_stow(&mut self) {
-        self.state = AppState::Stowing;
-        self.output.clear();
-        self.output.push("Starting stow...".to_string());
+        self.set_state(AppState::Stowing);
+        {
+            let mut out = self.output.lock().unwrap();
+            out.clear();
+            out.push("Starting stow...".to_string());
+        }
 
-        let output = Command::new("sh")
+        let cmd_output = Command::new("sh")
             .args(["-c", "mkdir -p $HOME/.local/bin && stow -R -t $HOME/ --dotfiles ."])
             .output();
 
-        match output {
-            Ok(out) => {
-                if !out.stdout.is_empty() {
-                    self.output.push(String::from_utf8_lossy(&out.stdout).to_string());
+        match cmd_output {
+            Ok(co) => {
+                if !co.stdout.is_empty() {
+                    let mut out = self.output.lock().unwrap();
+                    out.push(String::from_utf8_lossy(&co.stdout).to_string());
                 }
-                if !out.stderr.is_empty() {
-                    self.output.push(String::from_utf8_lossy(&out.stderr).to_string());
+                if !co.stderr.is_empty() {
+                    let mut out = self.output.lock().unwrap();
+                    out.push(String::from_utf8_lossy(&co.stderr).to_string());
                 }
-                if out.status.success() {
-                    self.output.push("✓ Stow completed successfully".to_string());
+                let mut out = self.output.lock().unwrap();
+                if co.status.success() {
+                    out.push("✓ Stow completed successfully".to_string());
                 } else {
-                    self.output.push("✗ Stow failed".to_string());
+                    out.push("✗ Stow failed".to_string());
                 }
             }
             Err(e) => {
-                self.output.push(format!("Error: {}", e));
+                let mut out = self.output.lock().unwrap();
+                out.push(format!("Error: {}", e));
             }
         }
 
-        self.output.push("Press ESC to return to menu".to_string());
-        self.scroll = (self.output.len() as u16).saturating_sub(1);
+        {
+            let mut out = self.output.lock().unwrap();
+            out.push("Press ESC to return to menu".to_string());
+        }
+        self.set_state(AppState::Done);
     }
 }
 
@@ -367,87 +417,99 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
     let mut password_input = String::new();
 
     loop {
+        let state = app.get_state();
+        
         terminal.draw(|f| ui(f, app))?;
 
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
-                match app.state {
-                    AppState::GettingPassword => {
-                        match key.code {
-                            KeyCode::Enter => {
-                                app.sudo_password = password_input.clone();
-                                password_input.clear();
-                                app.running.store(true, Ordering::Relaxed);
-                                app.run_install();
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    match state {
+                        AppState::GettingPassword => {
+                            match key.code {
+                                KeyCode::Enter => {
+                                    app.sudo_password = password_input.clone();
+                                    password_input.clear();
+                                    app.running.store(true, Ordering::Relaxed);
+                                    app.run_install();
+                                }
+                                KeyCode::Backspace => {
+                                    password_input.pop();
+                                }
+                                KeyCode::Esc => {
+                                    app.set_state(AppState::Menu);
+                                    password_input.clear();
+                                }
+                                KeyCode::Char(c) => {
+                                    password_input.push(c);
+                                }
+                                _ => {}
                             }
-                            KeyCode::Backspace => {
-                                password_input.pop();
-                            }
-                            KeyCode::Esc => {
-                                app.state = AppState::Menu;
-                                password_input.clear();
-                            }
-                            KeyCode::Char(c) => {
-                                password_input.push(c);
-                            }
-                            _ => {}
                         }
-                    }
-                    AppState::Menu => {
-                        match key.code {
-                            KeyCode::Up => {
-                                if app.selected_index > 0 {
-                                    app.selected_index -= 1;
+                        AppState::Menu => {
+                            match key.code {
+                                KeyCode::Up => {
+                                    if app.selected_index > 0 {
+                                        app.selected_index -= 1;
+                                    }
                                 }
-                            }
-                            KeyCode::Down => {
-                                if app.selected_index < app.menu_items.len() - 1 {
-                                    app.selected_index += 1;
+                                KeyCode::Down => {
+                                    if app.selected_index < app.menu_items.len() - 1 {
+                                        app.selected_index += 1;
+                                    }
                                 }
-                            }
-                            KeyCode::Enter => {
-                                match app.selected_index {
-                                    0 => {
-                                        app.running.store(true, Ordering::Relaxed);
-                                        app.run_install();
+                                KeyCode::Enter => {
+                                    match app.selected_index {
+                                        0 => {
+                                            app.running.store(true, Ordering::Relaxed);
+                                            app.run_install();
+                                        }
+                                        1 => {
+                                            app.run_stow();
+                                        }
+                                        2 => {
+                                            app.set_state(AppState::Done);
+                                        }
+                                        3 => {
+                                            app.running.store(false, Ordering::Relaxed);
+                                            return Ok(());
+                                        }
+                                        _ => {}
                                     }
-                                    1 => {
-                                        app.run_stow();
-                                    }
-                                    2 => {
-                                        app.state = AppState::Done;
-                                    }
-                                    3 => {
-                                        app.running.store(false, Ordering::Relaxed);
-                                        return Ok(());
-                                    }
-                                    _ => {}
                                 }
+                                KeyCode::Esc => {
+                                    app.running.store(false, Ordering::Relaxed);
+                                    return Ok(());
+                                }
+                                _ => {}
                             }
-                            KeyCode::Esc => {
+                        }
+                        AppState::Installing | AppState::Stowing => {
+                            if key.code == KeyCode::Esc {
                                 app.running.store(false, Ordering::Relaxed);
-                                return Ok(());
+                                app.set_state(AppState::Menu);
+                                let mut out = app.output.lock().unwrap();
+                                out.clear();
+                                out.push("Welcome to dot-setup TUI".to_string());
                             }
-                            _ => {}
                         }
-                    }
-                    AppState::Installing | AppState::Stowing => {
-                        if key.code == KeyCode::Esc {
-                            app.state = AppState::Menu;
-                            app.running.store(false, Ordering::Relaxed);
-                            app.output.clear();
-                            app.output.push("Welcome to dot-setup TUI".to_string());
-                        }
-                    }
-                    AppState::Done => {
-                        if key.code == KeyCode::Esc {
-                            app.state = AppState::Menu;
-                            app.output.clear();
-                            app.output.push("Welcome to dot-setup TUI".to_string());
+                        AppState::Done => {
+                            if key.code == KeyCode::Esc {
+                                app.set_state(AppState::Menu);
+                                let mut out = app.output.lock().unwrap();
+                                out.clear();
+                                out.push("Welcome to dot-setup TUI".to_string());
+                            }
                         }
                     }
                 }
             }
+        }
+        
+        let current_state = app.get_state();
+        if current_state == AppState::Installing || current_state == AppState::Stowing {
+            let out = app.output.lock().unwrap();
+            app.scroll = (out.len() as u16).saturating_sub(1);
         }
     }
 }
@@ -467,7 +529,10 @@ fn ui(frame: &mut Frame, app: &App) {
         .block(Block::default().borders(Borders::ALL).title("Main Menu"));
     frame.render_widget(title, chunks[0]);
 
-    match app.state {
+    let state = app.get_state();
+    let output = app.output.lock().unwrap();
+
+    match state {
         AppState::GettingPassword => {
             let prompt = Paragraph::new("Enter sudo password:")
                 .style(Style::default().fg(Color::Yellow))
@@ -504,15 +569,14 @@ fn ui(frame: &mut Frame, app: &App) {
                 .block(Block::default().borders(Borders::ALL).title("Status"));
             frame.render_widget(status_line, chunks[1]);
 
-            let output_text: Vec<Line> = app
-                .output
+            let output_text: Vec<Line> = output
                 .iter()
                 .map(|s| Line::from(s.as_str()))
                 .collect();
-            let output = Paragraph::new(output_text)
+            let output_widget = Paragraph::new(output_text)
                 .block(Block::default().borders(Borders::ALL).title("Installation Log"))
                 .scroll((app.scroll, 0));
-            frame.render_widget(output, chunks[1]);
+            frame.render_widget(output_widget, chunks[1]);
         }
         AppState::Stowing => {
             let status = Line::from(vec![
@@ -523,30 +587,28 @@ fn ui(frame: &mut Frame, app: &App) {
                 .block(Block::default().borders(Borders::ALL).title("Status"));
             frame.render_widget(status_line, chunks[1]);
 
-            let output_text: Vec<Line> = app
-                .output
+            let output_text: Vec<Line> = output
                 .iter()
                 .map(|s| Line::from(s.as_str()))
                 .collect();
-            let output = Paragraph::new(output_text)
+            let output_widget = Paragraph::new(output_text)
                 .block(Block::default().borders(Borders::ALL).title("Stow Log"))
                 .scroll((app.scroll, 0));
-            frame.render_widget(output, chunks[1]);
+            frame.render_widget(output_widget, chunks[1]);
         }
         AppState::Done => {
-            let output_text: Vec<Line> = app
-                .output
+            let output_text: Vec<Line> = output
                 .iter()
                 .map(|s| Line::from(s.as_str()))
                 .collect();
-            let output = Paragraph::new(output_text)
+            let output_widget = Paragraph::new(output_text)
                 .block(Block::default().borders(Borders::ALL).title("Logs"))
                 .scroll((app.scroll, 0));
-            frame.render_widget(output, chunks[1]);
+            frame.render_widget(output_widget, chunks[1]);
         }
     }
 
-    let help_text = match app.state {
+    let help_text = match state {
         AppState::GettingPassword => "Type password | Enter Submit | Esc Cancel",
         _ => "↑↓ Navigate | Enter Select | Esc Back",
     };
