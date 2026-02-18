@@ -26,8 +26,25 @@ fi
 URL="https://github.com/$REPO/releases/download/$VERSION/dot-setup-$ARCH"
 BINARY_PATH="$TMP_DIR/$BINARY_NAME"
 
-curl -sL "$URL" -o "$BINARY_PATH"
-chmod +x "$BINARY_PATH"
-
-echo "Running dot-setup..."
-exec "$BINARY_PATH"
+if curl -sL --fail "$URL" -o "$BINARY_PATH" 2>/dev/null; then
+    chmod +x "$BINARY_PATH"
+    echo "Running dot-setup..."
+    exec "$BINARY_PATH"
+else
+    echo "Release not found. Building from source..."
+    
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    if [[ -d "$SCRIPT_DIR/dot-setup" ]]; then
+        echo "Building dot-setup..."
+        (cd "$SCRIPT_DIR/dot-setup" && cargo build --release)
+        BUILT_BINARY="$SCRIPT_DIR/dot-setup/target/release/$BINARY_NAME"
+        if [[ -x "$BUILT_BINARY" ]]; then
+            echo "Running dot-setup..."
+            exec "$BUILT_BINARY"
+        fi
+    fi
+    
+    echo "Error: Could not download or build dot-setup"
+    echo "Please ensure Rust and cargo are installed: https://rustup.rs/"
+    exit 1
+fi
