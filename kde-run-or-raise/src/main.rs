@@ -5,13 +5,13 @@ use std::process::Command;
 #[command(name = "kde-run-or-raise")]
 #[command(about = "Run or raise a KDE Plasma application", long_about = None)]
 struct Args {
-    /// Application name (e.g., firefox, konsole, dolphin)
-    #[arg(required = true)]
-    app: String,
+    /// Application ID (e.g., firefox, org.kde.dolphin)
+    #[arg(short, long, required = true)]
+    app_id: String,
 
-    /// Optional: executable path if different from app name
-    #[arg(short, long)]
-    exec: Option<String>,
+    /// Command to spawn if app is not running
+    #[arg(short, long, required = true)]
+    command: String,
 
     /// Switch to the app's desktop instead of raising
     #[arg(short, long)]
@@ -21,16 +21,16 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    if let Some(window_id) = find_window(&args.app) {
+    if let Some(window_id) = find_window(&args.app_id) {
         println!("Found window {}, raising...", window_id);
         raise_window(&window_id, args.switch_desktop);
     } else {
         println!("Window not found, launching...");
-        launch_app(&args.app, args.exec.as_deref().unwrap_or(&args.app));
+        launch_app(&args.command);
     }
 }
 
-fn find_window(app_name: &str) -> Option<String> {
+fn find_window(app_id: &str) -> Option<String> {
     let output = Command::new("qdbus")
         .args(["org.kde.KWin", "/KWin", "org.kde.KWin.Windows"])
         .output();
@@ -48,13 +48,13 @@ fn find_window(app_name: &str) -> Option<String> {
         }
 
         if let Some(class) = get_window_property(window_id, "windowClass") {
-            if class.to_lowercase().contains(&app_name.to_lowercase()) {
+            if class.to_lowercase().contains(&app_id.to_lowercase()) {
                 return Some(window_id.to_string());
             }
         }
         
         if let Some(title) = get_window_property(window_id, "caption") {
-            if title.to_lowercase().contains(&app_name.to_lowercase()) {
+            if title.to_lowercase().contains(&app_id.to_lowercase()) {
                 return Some(window_id.to_string());
             }
         }
@@ -104,21 +104,8 @@ fn raise_window(window_id: &str, switch_desktop: bool) {
         .output();
 }
 
-fn launch_app(app_name: &str, exec: &str) {
-    let output = Command::new("gtk-launch")
-        .arg(app_name)
-        .output();
-
-    if output.is_err() || !output.unwrap().status.success() {
-        let output = Command::new("kstart")
-            .args(["--desktop", "-1", exec])
-            .output();
-
-        if output.is_err() || !output.unwrap().status.success() {
-            let _ = Command::new("nohup")
-                .arg(exec)
-                .arg("&")
-                .spawn();
-        }
-    }
+fn launch_app(command: &str) {
+    let _ = Command::new("bash")
+        .args(["-c", command])
+        .spawn();
 }
