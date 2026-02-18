@@ -529,7 +529,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                 KeyCode::Char(' ') => {
                                     if app.selected_index < app.tasks.len() {
                                         app.toggle_task();
-                                    } else if app.selected_index == app.tasks.len() + 1 {
+                                    } else if app.selected_index == app.tasks.len() {
                                         app.set_state(AppState::Confirm);
                                         app.selected_index = 0;
                                         app.focus = Focus::Buttons;
@@ -538,7 +538,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut App)
                                 KeyCode::Enter => {
                                     if app.selected_index < app.tasks.len() {
                                         app.toggle_task();
-                                    } else if app.selected_index == app.tasks.len() + 1 {
+                                    } else if app.selected_index == app.tasks.len() {
                                         app.set_state(AppState::Confirm);
                                         app.selected_index = 0;
                                         app.focus = Focus::Buttons;
@@ -629,7 +629,7 @@ fn ui(frame: &mut Frame, app: &App) {
             frame.render_widget(prompt, chunks[1]);
         }
         AppState::Selection => {
-            let items: Vec<ListItem> = app
+            let mut items: Vec<ListItem> = app
                 .tasks
                 .iter()
                 .enumerate()
@@ -644,6 +644,14 @@ fn ui(frame: &mut Frame, app: &App) {
                     ListItem::new(Span::styled(content, style))
                 })
                 .collect();
+
+            let confirm_idx = app.tasks.len();
+            let confirm_style = if app.selected_index == confirm_idx {
+                Style::default().fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::DarkGray)
+            };
+            items.push(ListItem::new(Span::styled(">>> Confirm <<<", confirm_style)));
 
             let list = List::new(items)
                 .block(Block::default().borders(Borders::ALL).title("Select tasks to run (Space to toggle)"))
