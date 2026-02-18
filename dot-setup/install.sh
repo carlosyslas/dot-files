@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="v0.2.0"
+VERSION="v0.2.1"
 BINARY_NAME="dot-setup"
 REPO="carlosyslas/dot-files"
 TMP_DIR=$(mktemp -d)

@@ -3,7 +3,7 @@
 ## Quick Install
 
 ```bash
-curl -s https://raw.githubusercontent.com/carlosyslas/dot-files/main/dot-setup/install.sh | bash
+curl -s https://raw.githubusercontent.com/carlosyslas/dot-files/v0.2.1/dot-setup/install.sh | bash
 ```
 
 This will:
