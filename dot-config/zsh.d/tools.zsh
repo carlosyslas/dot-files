@@ -1,23 +1,18 @@
-#!/usr/bin/bash
-
 # Bat
 export BAT_THEME="gruvbox (Dark) (Medium)"
 
 # Rust
-source "$HOME/.cargo/env"
-. "$HOME/.cargo/env"
+if [ -f "$HOME/.cargo/env" ]; then
+  source "$HOME/.cargo/env"
+  . "$HOME/.cargo/env"
+fi
 
-
-# Pyenv
-export PYENV_ROOT=$HOME/.pyenv
-export PATH="$PATH:$PYENV_ROOT/bin"
-eval "$(pyenv init - bash)"
 
 # Fnm
 FNM_PATH="$HOME/.local/share/fnm"
 if [ -d "$FNM_PATH" ]; then
   export PATH="$FNM_PATH:$PATH"
-  eval "`fnm env`"
+  eval "$(fnm env)"
 fi
 
 # FZF
@@ -49,6 +44,5 @@ export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 #export FZF_CTRL_T_OPTS='--tmux center --layout=reverse --style minimal --preview="fish -c \'fzf_preview {}\'"'
 export FZF_CTRL_R_OPTS='--tmux center --layout=reverse --style minimal'
-export FZF_DEFAULT_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
 #export FZF_ALT_C_OPTS='--tmux center --layout=reverse --style minimal --preview="fish -c \'fzf_preview {}\'"'
-eval "$(fzf --bash)"
+eval "$(fzf --zsh)"
