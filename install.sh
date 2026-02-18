@@ -77,7 +77,6 @@ eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
 echo "=== Installing Homebrew packages ==="
 brew install anomalyco/tap/opencode
-brew install --cask opencode-desktop
 brew install starship hugo tlrc uv
 
 echo "=== Installing OpenCode Desktop ==="
