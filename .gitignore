@@ -1,0 +1,17 @@
+# Rust build
+dot-setup/target/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local config
+.env
+.env.local

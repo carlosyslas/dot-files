@@ -1,0 +1,10 @@
+[package]
+name = "dot-setup"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ratatui = { version = "0.28", features = ["macros"] }
+crossterm = "0.28"
+tokio = { version = "1", features = ["process", "io-util", "rt-multi-thread"] }
+color-eyre = "0.6"
