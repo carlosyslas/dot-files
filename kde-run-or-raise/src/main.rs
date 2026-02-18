@@ -5,7 +5,7 @@ use std::process::Command;
 #[command(name = "kde-run-or-raise")]
 #[command(about = "Run or raise a KDE Plasma application", long_about = None)]
 struct Args {
-    /// Application ID (e.g., firefox, alacritty)
+    /// Application ID (e.g., alacritty, firefox)
     #[arg(short, long)]
     app_id: String,
 
@@ -17,20 +17,29 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    if raise_with_kstart(&args.app_id) {
-        println!("Raised existing window");
+    if let Some(window_id) = find_window(&args.app_id) {
+        println!("Found window {}, raising...", window_id);
+        raise_window(&window_id);
     } else {
         println!("Window not found, launching...");
         launch_app(&args.command);
     }
 }
 
-fn raise_with_kstart(app_id: &str) -> bool {
-    let output = Command::new("kstart")
-        .args(["--activate", "-a", app_id])
-        .output();
+fn find_window(app_id: &str) -> Option<String> {
+    let output = Command::new("xdotool")
+        .args(["search", "--class", app_id])
+        .output()
+        .ok()?;
 
-    output.map(|o| o.status.success()).unwrap_or(false)
+    let windows = String::from_utf8_lossy(&output.stdout);
+    windows.lines().next().map(|s| s.to_string())
+}
+
+fn raise_window(window_id: &str) {
+    let _ = Command::new("xdotool")
+        .args(["windowactivate", "--sync", window_id])
+        .output();
 }
 
 fn launch_app(command: &str) {
