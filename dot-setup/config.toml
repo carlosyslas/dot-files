@@ -1,0 +1,44 @@
+title = "dot-setup Configuration"
+
+[repositories]
+rpm_fusion_free = "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
+rpm_fusion_nonfree = "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
+docker = "https://download.docker.com/linux/fedora/docker-ce.repo"
+terra = "https://repos.fyralabs.com/terra$releasever"
+
+[packages]
+
+[packages.dnf]
+description = "Core system packages"
+packages = ["vim", "stow", "alacritty", "git", "timeshift", "emacs", "yt-dlp", "imv", "mpv", "vlc", "zsh", "fastfetch", "bat", "ranger", "cargo", "jq", "yq", "fzf", "ripgrep", "fd-find", "eza", "bottom", "starship", "gh", "curl", "wget", "unzip", "tar", "gzip", "fuse", "polkit", "gnome-keyring", "seahorse", "libsodium", "pkgconfig"]
+
+[packages.docker]
+description = "Docker container runtime"
+packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
+enable_service = true
+
+[packages.flatpak]
+description = "Flatpak applications"
+remote = "flathub"
+apps = ["com.brave.Browser", "app.zen_browser.zen", "io.gitlab.theevilskeleton.Upscaler", "org.upscayl.Upscaler", "io.github.kolunmi.Bazaar", "org.qbittorrent.qBittorrent", "com.rafaelmardojai.Blanket", "com.github.johnfactotum.Foliate", "org.telegram.desktop"]
+
+[packages.terra]
+description = "Terra repository extras"
+packages = ["terra-release-extras"]
+
+[packages.homebrew]
+description = "Homebrew packages"
+install_script = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+packages = ["anomalyco/tap/opencode", "starship", "hugo", "tlrc", "uv"]
+
+[packages.cargo]
+description = "Cargo binaries"
+packages = ["fnm", "bottom"]
+
+[packages.opencode]
+description = "OpenCode Desktop"
+url = "https://opencode.ai/download/linux-x64-rpm"
+
+[commands]
+update = "dnf update -y"
+shell_init = "/home/linuxbrew/.linuxbrew/bin/brew shellenv"

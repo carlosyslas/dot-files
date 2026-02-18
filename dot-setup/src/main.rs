@@ -12,7 +12,10 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame, Terminal,
 };
+use serde::Deserialize;
+use std::fs;
 use std::io;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
@@ -28,6 +31,71 @@ enum AppState {
     Done,
 }
 
+#[derive(Deserialize, Clone)]
+struct Config {
+    repositories: Repositories,
+    packages: Packages,
+    commands: Commands,
+}
+
+#[derive(Deserialize, Clone)]
+struct Repositories {
+    #[serde(rename = "rpm_fusion_free")]
+    rpm_fusion_free: String,
+    #[serde(rename = "rpm_fusion_nonfree")]
+    rpm_fusion_nonfree: String,
+    docker: String,
+    terra: String,
+}
+
+#[derive(Deserialize, Clone)]
+struct Packages {
+    #[serde(rename = "dnf")]
+    dnf: PackageGroup,
+    docker: PackageGroup,
+    flatpak: FlatpakGroup,
+    terra: PackageGroup,
+    homebrew: HomebrewGroup,
+    cargo: PackageGroup,
+    opencode: OpenCodeGroup,
+}
+
+#[derive(Deserialize, Clone)]
+struct PackageGroup {
+    description: String,
+    packages: Vec<String>,
+    #[serde(default)]
+    enable_service: bool,
+}
+
+#[derive(Deserialize, Clone)]
+struct FlatpakGroup {
+    description: String,
+    remote: String,
+    apps: Vec<String>,
+}
+
+#[derive(Deserialize, Clone)]
+struct HomebrewGroup {
+    description: String,
+    #[serde(rename = "install_script")]
+    install_script: String,
+    packages: Vec<String>,
+}
+
+#[derive(Deserialize, Clone)]
+struct OpenCodeGroup {
+    description: String,
+    url: String,
+}
+
+#[derive(Deserialize, Clone)]
+struct Commands {
+    update: String,
+    #[serde(rename = "shell_init")]
+    shell_init: String,
+}
+
 struct App {
     state: AppState,
     selected_index: usize,
@@ -36,10 +104,13 @@ struct App {
     scroll: u16,
     sudo_password: String,
     running: AtomicBool,
+    config: Config,
 }
 
 impl App {
     fn new() -> Self {
+        let config = load_config().expect("Failed to load config");
+        
         Self {
             state: AppState::Menu,
             selected_index: 0,
@@ -53,6 +124,7 @@ impl App {
             scroll: 0,
             sudo_password: String::new(),
             running: AtomicBool::new(true),
+            config,
         }
     }
 
@@ -73,29 +145,81 @@ impl App {
         self.output.push("Starting installation...".to_string());
 
         let password = self.sudo_password.clone();
+        let config = self.config.clone();
         let (tx, rx) = mpsc::channel();
 
         thread::spawn(move || {
+            let repo = &config.repositories;
+            let pkg = &config.packages;
+            let cmd = &config.commands;
+
             let commands: Vec<(&str, String)> = vec![
-                ("Adding RPM Fusion repositories", format!("echo '{}' | sudo -S dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm", password)),
-                ("Adding Docker repository", format!("echo '{}' | sudo -S dnf config-manager addrepo --overwrite --from-repofile https://download.docker.com/linux/fedora/docker-ce.repo", password)),
-                ("Adding Terra repository", format!("echo '{}' | sudo -S bash -c 'if ! rpm -q terra-release &>/dev/null; then dnf install --nogpgcheck --repofrompath terra,https://repos.fyralabs.com/terra$releasever terra-release; fi'", password)),
-                ("Updating system", format!("echo '{}' | sudo -S dnf update -y", password)),
-                ("Installing core packages", format!("echo '{}' | sudo -S dnf install -y vim stow alacritty git timeshift emacs yt-dlp imv mpv vlc zsh fastfetch bat ranger cargo jq yq fzf ripgrep fd-find eza bottom starship gh curl wget unzip tar gzip fuse polkit gnome-keyring seahorse libsodium pkgconfig", password)),
-                ("Installing Docker", format!("echo '{}' | sudo -S dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && echo '{}' | sudo -S systemctl enable --now docker", password, password)),
-                ("Installing Flatpak apps", "flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y com.brave.Browser app.zen_browser.zen io.gitlab.theevilskeleton.Upscaler org.upscayl.Upscaler io.github.kolunmi.Bazaar org.qbittorrent.qBittorrent com.rafaelmardojai.Blanket com.github.johnfactotum.Foliate org.telegram.desktop".to_string()),
-                ("Installing Homebrew", "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"".to_string()),
-                ("Installing Homebrew packages", "eval \"$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && brew install anomalyco/tap/opencode starship hugo tlrc uv".to_string()),
-                ("Installing OpenCode Desktop", format!("echo '{}' | sudo -S dnf install -y https://opencode.ai/download/linux-x64-rpm", password)),
-                ("Installing Cargo packages", "cargo install fnm bottom".to_string()),
-                ("Installing Terra extras", format!("echo '{}' | sudo -S dnf install -y terra-release-extras", password)),
+                ("Adding RPM Fusion repositories", format!(
+                    "echo '{}' | sudo -S dnf install -y {} {}",
+                    password, repo.rpm_fusion_free, repo.rpm_fusion_nonfree
+                )),
+                ("Adding Docker repository", format!(
+                    "echo '{}' | sudo -S dnf config-manager addrepo --overwrite --from-repofile {}",
+                    password, repo.docker
+                )),
+                ("Adding Terra repository", format!(
+                    "echo '{}' | sudo -S bash -c 'if ! rpm -q terra-release &>/dev/null; then dnf install --nogpgcheck --repofrompath terra,{} terra-release; fi'",
+                    password, repo.terra
+                )),
+                ("Updating system", format!("echo '{}' | sudo -S {}", password, cmd.update)),
+                ("Installing core packages", format!(
+                    "echo '{}' | sudo -S dnf install -y {}",
+                    password, pkg.dnf.packages.join(" ")
+                )),
+                ("Installing Docker", format!(
+                    "echo '{}' | sudo -S dnf install -y {}",
+                    password, pkg.docker.packages.join(" ")
+                )),
+                ("Enabling Docker service", if pkg.docker.enable_service {
+                    format!("echo '{}' | sudo -S systemctl enable --now docker", password)
+                } else {
+                    "".to_string()
+                }),
+                ("Adding Flatpak remote", format!(
+                    "flatpak remote-add --if-not-exists {} https://dl.flathub.org/repo/flathub.flatpakrepo",
+                    pkg.flatpak.remote
+                )),
+                ("Installing Flatpak apps", format!(
+                    "flatpak install -y {}",
+                    pkg.flatpak.apps.join(" ")
+                )),
+                ("Installing Homebrew", format!(
+                    "/bin/bash -c \"$(curl -fsSL {})\"",
+                    pkg.homebrew.install_script
+                )),
+                ("Installing Homebrew packages", format!(
+                    "eval \"$( {})\" && brew install {}",
+                    cmd.shell_init,
+                    pkg.homebrew.packages.join(" ")
+                )),
+                ("Installing OpenCode Desktop", format!(
+                    "echo '{}' | sudo -S dnf install -y {}",
+                    password, pkg.opencode.url
+                )),
+                ("Installing Cargo packages", format!(
+                    "cargo install {}",
+                    pkg.cargo.packages.join(" ")
+                )),
+                ("Installing Terra extras", format!(
+                    "echo '{}' | sudo -S dnf install -y {}",
+                    password, pkg.terra.packages.join(" ")
+                )),
             ];
 
-            for (desc, cmd) in commands {
+            for (desc, cmd_str) in commands {
+                if cmd_str.is_empty() {
+                    continue;
+                }
+                
                 let _ = tx.send(format!("\n=== {} ===", desc));
 
                 let output = Command::new("sh")
-                    .args(["-c", &cmd])
+                    .args(["-c", &cmd_str])
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
@@ -189,6 +313,29 @@ impl App {
         self.output.push("Press ESC to return to menu".to_string());
         self.scroll = (self.output.len() as u16).saturating_sub(1);
     }
+}
+
+fn load_config() -> Result<Config> {
+    let config_path = get_config_path()?;
+    let content = fs::read_to_string(&config_path)?;
+    let config: Config = toml::from_str(&content)?;
+    Ok(config)
+}
+
+fn get_config_path() -> Result<PathBuf> {
+    let exe_path = std::env::current_exe()?;
+    let config_path = exe_path.with_file_name("config.toml");
+    
+    if config_path.exists() {
+        return Ok(config_path);
+    }
+    
+    let fallback = PathBuf::from("config.toml");
+    if fallback.exists() {
+        return Ok(fallback);
+    }
+    
+    Ok(config_path)
 }
 
 fn main() -> Result<()> {
