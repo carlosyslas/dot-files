@@ -6,27 +6,67 @@ use std::process::Command;
 #[command(about = "Run or raise a KDE Plasma application", long_about = None)]
 struct Args {
     /// Application ID (e.g., firefox, org.kde.dolphin)
-    #[arg(short, long, required = true)]
-    app_id: String,
+    #[arg(short, long)]
+    app_id: Option<String>,
 
     /// Command to spawn if app is not running
-    #[arg(short, long, required = true)]
-    command: String,
+    #[arg(short, long)]
+    command: Option<String>,
 
     /// Switch to the app's desktop instead of raising
     #[arg(short, long)]
     switch_desktop: bool,
+
+    /// List all open windows and their app IDs
+    #[arg(short, long)]
+    list: bool,
 }
 
 fn main() {
     let args = Args::parse();
 
-    if let Some(window_id) = find_window(&args.app_id) {
+    if args.list {
+        list_windows();
+        return;
+    }
+
+    let app_id = args.app_id.expect("--app-id required");
+    let command = args.command.expect("--command required");
+
+    if let Some(window_id) = find_window(&app_id) {
         println!("Found window {}, raising...", window_id);
         raise_window(&window_id, args.switch_desktop);
     } else {
         println!("Window not found, launching...");
-        launch_app(&args.command);
+        launch_app(&command);
+    }
+}
+
+fn list_windows() {
+    let output = Command::new("qdbus")
+        .args(["org.kde.KWin", "/KWin", "org.kde.KWin.Windows"])
+        .output();
+
+    let Ok(output) = output else {
+        eprintln!("Failed to get windows from KWin");
+        return;
+    };
+
+    let windows = String::from_utf8_lossy(&output.stdout);
+    println!("Open windows:");
+    
+    for line in windows.lines() {
+        let window_id = line.trim();
+        if window_id.is_empty() {
+            continue;
+        }
+
+        let class = get_window_property(window_id, "windowClass").unwrap_or_default();
+        let title = get_window_property(window_id, "caption").unwrap_or_default();
+        
+        if !class.is_empty() || !title.is_empty() {
+            println!("  {} | class: '{}' | title: '{}'", window_id, class, title);
+        }
     }
 }
 
