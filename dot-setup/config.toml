@@ -20,7 +20,7 @@ enable_service = true
 [packages.flatpak]
 description = "Flatpak applications"
 remote = "flathub"
-apps = ["com.brave.Browser", "app.zen_browser.zen", "io.gitlab.theevilskeleton.Upscaler", "org.upscayl.Upscaler", "io.github.kolunmi.Bazaar", "org.qbittorrent.qBittorrent", "com.rafaelmardojai.Blanket", "com.github.johnfactotum.Foliate", "org.telegram.desktop"]
+apps = ["com.brave.Browser", "app.zen_browser.zen", "io.gitlab.theevilskeleton.Upscaler", "org.upscayl.Upscaler", "io.github.kolunmi.Bazaar", "org.qbittorrent.qBittorrent", "com.rafaelmardojai.Blanket", "com.github.johnfactotum.Foliate", "org.telegram.desktop", "it.mijorus.gearlever"]
 
 [packages.terra]
 description = "Terra repository extras"
